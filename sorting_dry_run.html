@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sorting Dry Run: C++ Lab Visualizer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#eef1f7; --panel:#ffffff; --soft:#f3f5fb; --ink:#14203a; --muted:#5a6580; --line:#d3daea;
+  --accent:#3346c9; --pt:#ffffff;
+  --sorted:#17925a; --sorted-bg:#d9f3e6; --sorted-ink:#0d6d43;
+  --key:#d08a00;   --key-bg:#ffefc2;   --key-ink:#8a5600;
+  --cmp:#2a63d8;   --cmp-bg:#d8e6ff;   --cmp-ink:#1c4bb0;
+  --swap:#cf2e6a;  --swap-bg:#ffdbe8;  --swap-ink:#b01f55;
+  --lt:#0c8f9c;    --lt-bg:#d0f0f3;    --lt-ink:#08707b;
+  --rt:#7442c4;    --rt-bg:#e8dcfb;    --rt-ink:#5d33a8;
+  --code-bg:#162038; --code-ink:#e6ebf7; --code-mute:#7f8db3; --code-line:#25324f;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0d1324; --panel:#161e35; --soft:#1b2440; --ink:#e7ecf8; --muted:#9aa6c4; --line:#2c3758;
+    --accent:#8b9bff; --pt:#0d1324;
+    --sorted:#4fd19a; --sorted-bg:rgba(79,209,154,.18); --sorted-ink:#6fe3b0;
+    --key:#ffc247;   --key-bg:rgba(255,194,71,.18);   --key-ink:#ffcf6b;
+    --cmp:#7aa7ff;   --cmp-bg:rgba(122,167,255,.2);   --cmp-ink:#9dbfff;
+    --swap:#ff7aa8;  --swap-bg:rgba(255,122,168,.2);  --swap-ink:#ff9ec0;
+    --lt:#4cd0dc;    --lt-bg:rgba(76,208,220,.17);    --lt-ink:#6fe0ea;
+    --rt:#b491ff;    --rt-bg:rgba(180,145,255,.2);    --rt-ink:#c9b0ff;
+    --code-bg:#0a0f1e; --code-line:#1a2440;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0d1324; --panel:#161e35; --soft:#1b2440; --ink:#e7ecf8; --muted:#9aa6c4; --line:#2c3758;
+  --accent:#8b9bff; --pt:#0d1324;
+  --sorted:#4fd19a; --sorted-bg:rgba(79,209,154,.18); --sorted-ink:#6fe3b0;
+  --key:#ffc247;   --key-bg:rgba(255,194,71,.18);   --key-ink:#ffcf6b;
+  --cmp:#7aa7ff;   --cmp-bg:rgba(122,167,255,.2);   --cmp-ink:#9dbfff;
+  --swap:#ff7aa8;  --swap-bg:rgba(255,122,168,.2);  --swap-ink:#ff9ec0;
+  --lt:#4cd0dc;    --lt-bg:rgba(76,208,220,.17);    --lt-ink:#6fe0ea;
+  --rt:#b491ff;    --rt-bg:rgba(180,145,255,.2);    --rt-ink:#c9b0ff;
+  --code-bg:#0a0f1e; --code-line:#1a2440;
+}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+.app{display:flex;flex-direction:column;height:100vh;height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px))}
+*{box-sizing:border-box}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);
+  font-family:'Atkinson Hyperlegible',system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif;
+  font-size:1rem;line-height:1.45}
+button,input,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+code{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.88em;background:var(--soft);
+  border:1px solid var(--line);border-radius:.35rem;padding:.05rem .35rem}
+
+/* ---------- header ---------- */
+.top{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:.5rem 1.5rem;padding:.55rem 1.25rem .35rem}
+.top h1{margin:0;font-size:1.4rem;letter-spacing:-.01em;line-height:1.15}
+.top .sub{margin:.1rem 0 0;color:var(--muted);font-size:.9rem}
+.tabs{display:flex;flex-wrap:wrap;gap:.5rem;margin-left:auto}
+.tab{display:flex;align-items:center;gap:.55rem;font-weight:700;padding:.4rem .95rem .4rem .5rem;border-radius:.75rem;
+  border:2px solid var(--line);background:var(--panel);cursor:pointer}
+.tab .n{display:grid;place-items:center;width:1.6rem;height:1.6rem;border-radius:.45rem;background:var(--soft);
+  border:1px solid var(--line);font-size:.9rem}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected="true"] .n{background:var(--bg);color:var(--ink);border-color:var(--bg)}
+.tools{display:flex;gap:.4rem}
+.mini{border:2px solid var(--line);background:var(--panel);border-radius:.6rem;padding:.35rem .7rem;cursor:pointer;font-weight:700}
+
+/* ---------- data bar ---------- */
+.databar{flex:none;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem .5rem;padding:.15rem 1.25rem .55rem}
+.databar .lbl{font-weight:700;margin-right:.25rem}
+.chip{border:2px solid var(--line);background:var(--panel);border-radius:2rem;padding:.22rem .8rem;cursor:pointer;
+  font-size:.92rem;white-space:nowrap}
+.chip .d{display:none;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.85em;color:var(--muted);margin-left:.35rem}
+@media (min-width:1650px){.chip .d{display:inline}}
+.chip[aria-pressed="true"]{border-color:var(--accent);background:var(--soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.databar input{border:2px solid var(--line);background:var(--panel);border-radius:.6rem;padding:.25rem .7rem;width:13rem;
+  font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.9rem}
+.err{color:var(--swap-ink);font-size:.9rem}
+
+/* ---------- main grid ---------- */
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:minmax(340px,.95fr) minmax(0,1.5fr);gap:1rem;padding:.1rem 1.25rem .8rem}
+.codePane{background:var(--code-bg);color:var(--code-ink);border-radius:.9rem;overflow:hidden;display:flex;flex-direction:column;min-height:0;min-width:0}
+.codeHead{flex:none;padding:.55rem 1rem;border-bottom:1px solid var(--code-line);font-size:.88rem;color:var(--code-mute)}
+#code{overflow:auto;padding:.4rem 0 .8rem;position:relative;flex:1;min-height:0;scroll-behavior:smooth}
+.ln{display:flex;align-items:flex-start;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.9rem;line-height:1.65;
+  padding-right:.8rem;border-left:5px solid transparent}
+.ln .tx{white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.ln .no{flex:none;width:2.5rem;text-align:right;padding-right:.8rem;color:var(--code-mute);user-select:none}
+.ln.on{background:rgba(255,196,60,.2);border-left-color:var(--key)}
+.ln.on .no{color:#ffd36b}
+.kw{color:#ff9db8}.ty{color:#c7abff}.st{color:#a6e3b1}.nu{color:#9fd3ff}.cm{color:var(--code-mute);font-style:italic}
+
+/* ---------- stage ---------- */
+.stage{display:flex;flex-direction:column;gap:.75rem;min-width:0;min-height:0;overflow-y:auto;padding:.1rem .4rem .5rem 0}
+.stage>*{flex:none}
+.cols{display:flex;flex-direction:column;gap:.75rem;min-width:0}
+.cols>*{flex:none;min-width:0}
+@media (min-width:1500px){
+  .cols.has-tree{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:1rem;row-gap:.75rem;align-items:start}
+  .cols.has-tree>.b-board{grid-column:1;grid-row:1}
+  .cols.has-tree>.b-info{grid-column:1;grid-row:2}
+  .cols.has-tree>.b-ws{grid-column:1;grid-row:3}
+  .cols.has-tree>.b-console{grid-column:1;grid-row:4}
+  .cols.has-tree>.b-tree{grid-column:2;grid-row:1 / span 4}
+}
+.say{position:sticky;top:0;z-index:5;background:var(--panel);border:2px solid var(--line);border-radius:.9rem;padding:.7rem 1.1rem;font-size:1.25rem;line-height:1.45;
+  min-height:6.4rem;display:flex;align-items:center;box-shadow:0 6px 10px -6px rgba(0,0,0,.18)}
+.say>div{width:100%}
+.say b{font-weight:700}
+.say .k{color:var(--key-ink)}.say .s{color:var(--sorted-ink)}.say .c{color:var(--cmp-ink)}
+.say .w{color:var(--swap-ink)}.say .lt{color:var(--lt-ink)}.say .rt{color:var(--rt-ink)}
+.say.ask{border-style:dashed;border-color:var(--accent)}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:.9rem;padding:.5rem .6rem .6rem;min-width:0}
+.cardHead{font-size:.9rem;color:var(--muted);margin:0 .4rem .35rem}
+
+.board{position:relative;width:100%}
+.cell,.wcell{border:2.5px solid var(--line);background:var(--panel);color:var(--ink);border-radius:.65rem;display:flex;
+  align-items:center;justify-content:center;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-weight:700;
+  transition:background .25s,border-color .25s,opacity .25s,color .25s}
+.cell{position:absolute}
+.cell .ix{position:absolute;top:calc(100% + 4px);left:0;right:0;text-align:center;font:400 .8rem 'Atkinson Hyperlegible',system-ui,sans-serif;color:var(--muted)}
+.s-sorted,.s-merged,.s-small{background:var(--sorted-bg);border-color:var(--sorted)}
+.s-key,.s-min,.s-pivot,.s-placed{background:var(--key-bg);border-color:var(--key)}
+.s-next{border-color:var(--key);border-style:dashed}
+.s-cmp{background:var(--cmp-bg);border-color:var(--cmp)}
+.s-swap{background:var(--swap-bg);border-color:var(--swap)}
+.s-moved{background:var(--swap-bg);border-color:var(--swap);border-style:dashed}
+.s-gap{border-style:dashed;border-color:var(--muted);background:transparent}
+.s-gap .v{opacity:.28}
+.s-dim{opacity:.4}
+.s-lt{background:var(--lt-bg);border-color:var(--lt)}
+.s-rt{background:var(--rt-bg);border-color:var(--rt)}
+.s-big{background:var(--rt-bg);border-color:var(--rt)}
+.s-locked{background:var(--sorted);border-color:var(--sorted);color:var(--pt)}
+.s-used{opacity:.3;text-decoration:line-through}
+.s-front{border-color:var(--ink)}
+.s-ghost{border-style:dashed;background:transparent;opacity:.4}
+.pop{animation:pop .4s ease}
+@keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.16)}100%{transform:scale(1)}}
+
+.split{position:absolute;width:0;border-left:3px dashed var(--ink);opacity:.55;transition:left .3s,opacity .2s}
+.ptr,.tag{position:absolute;white-space:nowrap;transition:left .5s cubic-bezier(.3,.7,.3,1),top .3s,opacity .25s}
+.ptr{transform:translateX(-50%);padding:.12rem .6rem;border-radius:.5rem;font-weight:700;font-size:.98rem;
+  background:var(--pc,var(--ink));color:var(--pt)}
+.ptr::before{content:'';position:absolute;left:50%;top:-7px;margin-left:-6px;border:6px solid transparent;border-top:0;
+  border-bottom:7px solid var(--pc,var(--ink))}
+.ptr.n-i{--pc:var(--accent)}.ptr.n-j{--pc:var(--cmp)}.ptr.n-k{--pc:var(--swap)}
+.tag{transform:translate(-50%,-100%);padding:.25rem .7rem;border-radius:.6rem;font-weight:700;font-size:1rem;
+  font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;border:2px solid var(--key);background:var(--key-bg)}
+.tag::after{content:'';position:absolute;left:50%;bottom:-8px;margin-left:-6px;border:6px solid transparent;border-bottom:0;border-top:7px solid var(--key)}
+
+.legend{display:flex;flex-wrap:wrap;gap:.2rem 1rem;margin:.3rem .4rem 0;font-size:.88rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:.4rem}
+.legend i{display:inline-block;width:1rem;height:1rem;border-radius:.3rem;border:2.5px solid var(--line)}
+
+/* merge workspace */
+.ws{display:flex;flex-wrap:wrap;gap:.4rem 2rem}
+.wsrow{display:flex;align-items:flex-start;gap:.6rem}
+.wsl{flex:none;width:1.8rem;font-weight:700;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;padding-top:.55rem}
+.wsl.L{color:var(--lt-ink)}.wsl.R{color:var(--rt-ink)}
+.wcells{display:flex;gap:.4rem;flex-wrap:wrap}
+.wc{display:flex;flex-direction:column;align-items:center;gap:.25rem}
+.wcell{width:var(--wc);height:var(--wc);font-size:1.15rem}
+.wcell.tl{background:var(--lt-bg);border-color:var(--lt)}
+.wcell.tr{background:var(--rt-bg);border-color:var(--rt)}
+.wcell.empty{border-style:dashed;background:transparent}
+.wp{min-height:1.5rem;font-weight:700;font-size:.9rem;color:var(--pt);border-radius:.4rem;padding:0 .5rem}
+.wp.i{background:var(--accent)}.wp.j{background:var(--cmp)}.wp:empty{background:none}
+
+.info{display:flex;flex-wrap:wrap;gap:.5rem .6rem;align-items:center}
+.var{background:var(--panel);border:2px solid var(--line);border-radius:.6rem;padding:.2rem .65rem;
+  font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.98rem}
+.var b{color:var(--muted);font-weight:600}
+.var.chg{border-color:var(--key);background:var(--key-bg)}
+.stats{margin-left:auto;display:flex;gap:.6rem;flex-wrap:wrap}
+.stat{font-size:.95rem;color:var(--muted)}
+.stat b{color:var(--ink);font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:1.05rem}
+
+.stackbar{display:flex;flex-wrap:wrap;align-items:center;gap:.25rem .35rem;margin:0 .4rem .4rem;font-size:.9rem}
+.stackbar .lab{color:var(--muted);margin-right:.35rem}
+.sk{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.85rem;border:2px solid var(--line);border-radius:.5rem;padding:.05rem .5rem;background:var(--soft)}
+.sk.top{border-color:var(--key);background:var(--key-bg)}
+.sep{color:var(--muted)}
+.treeScroll{overflow-x:auto;overflow-y:visible;position:relative}
+.tree{position:relative}
+.tree svg{position:absolute;left:0;top:0;overflow:visible;color:var(--muted)}
+.tn{position:absolute;border-radius:.55rem;border:2px solid var(--line);background:var(--panel);padding:.05rem .2rem 0;
+  text-align:center;transition:border-color .25s,background .25s}
+.tn.active{border-color:var(--key);background:var(--key-bg);box-shadow:0 0 0 3px var(--key-bg)}
+.tn.wait{border-color:var(--cmp);border-style:dashed}
+.tn.done{border-color:var(--sorted);background:var(--sorted-bg)}
+.tn.fresh{animation:pop .45s ease}
+.tv{display:grid;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-weight:700;font-size:.92rem;line-height:1.4}
+.tv .piv{color:var(--key-ink);text-decoration:underline}
+.tl{font-size:.68rem;color:var(--muted);line-height:1.15;padding-bottom:.1rem}
+.emptyNote{color:var(--muted);padding:.4rem;font-size:.95rem}
+
+.console{margin:0;font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:.9rem;line-height:1.6;background:var(--soft);
+  border:2px solid var(--line);border-radius:.6rem;padding:.4rem .8rem;min-height:3.4rem;max-height:8.5rem;overflow:auto;white-space:pre-wrap}
+.console div.new{background:var(--key-bg);border-radius:.3rem}
+
+/* ---------- controls ---------- */
+.controls{flex:none;background:var(--panel);border-top:2px solid var(--line);
+  padding:.55rem 1.25rem;display:flex;flex-wrap:wrap;gap:.5rem 1rem;align-items:center}
+.btns{display:flex;gap:.5rem}
+.btn{font-weight:700;font-size:1.02rem;padding:.5rem 1.05rem;border-radius:.7rem;border:2px solid var(--ink);background:var(--panel);cursor:pointer;min-width:5.2rem}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--pt)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.scrub{flex:1;min-width:11rem;display:flex;align-items:center;gap:.7rem}
+.scrub input[type=range]{flex:1;accent-color:var(--accent);height:1.6rem}
+.stepinfo{font-weight:700;white-space:nowrap;font-size:.98rem}
+.opt{display:flex;align-items:center;gap:.4rem;font-size:.95rem}
+.opt select{border:2px solid var(--line);background:var(--panel);border-radius:.5rem;padding:.25rem .4rem}
+.opt input[type=checkbox]{width:1.2rem;height:1.2rem;accent-color:var(--accent)}
+.hint{color:var(--muted);font-size:.85rem}
+
+@media (max-width:980px){
+  .app{display:block;height:auto}
+  .grid{display:block}
+  .codePane{max-height:44vh;margin-bottom:1rem}
+  .stage{overflow:visible;padding-right:0}
+  .say{min-height:5.5rem}
+  .controls{position:sticky;bottom:0;z-index:10;padding-bottom:calc(.55rem + env(safe-area-inset-bottom,0px))}
+  .scrub{flex-basis:100%;order:5;flex-wrap:wrap;row-gap:.3rem}
+  .scrub input[type=range]{flex-basis:100%}
+  .stepinfo{white-space:normal}
+}
+@media (prefers-reduced-motion:reduce){
+  .ptr,.tag,.cell,.wcell,.tn,.split{transition:none}
+  .pop,.tn.fresh{animation:none}
+  #code{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="top">
+  <div>
+    <h1>Sorting, one step at a time</h1>
+    <p class="sub">Dry run of the C++ programs from the lab manual</p>
+  </div>
+  <nav class="tabs" role="tablist" aria-label="Choose a lab" id="tabs"></nav>
+  <div class="tools">
+    <button class="mini" id="smaller" aria-label="Smaller text">A−</button>
+    <button class="mini" id="bigger" aria-label="Bigger text">A+</button>
+    <button class="mini" id="theme" aria-label="Switch light or dark theme">Light / Dark</button>
+  </div>
+</header>
+
+<div class="databar" id="databar">
+  <span class="lbl">Test data</span>
+  <span id="presets" style="display:contents"></span>
+  <input id="custom" type="text" inputmode="numeric" placeholder="your own: 8 3 5 1" aria-label="Type your own numbers">
+  <button class="chip" id="load">Use my numbers</button>
+  <button class="chip" id="rand">Random</button>
+  <span class="err" id="err" role="status"></span>
+</div>
+
+<main class="grid">
+  <section class="codePane" aria-label="C++ code">
+    <div class="codeHead" id="codeHead"></div>
+    <div id="code"></div>
+  </section>
+
+  <section class="stage" id="stage">
+    <div class="say" id="say" aria-live="polite"></div>
+
+    <div class="cols" id="cols">
+      <div class="card b-board">
+        <div class="board" id="board">
+          <div class="split" id="split"></div>
+        </div>
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <div class="info b-info">
+        <div id="vars" class="info"></div>
+        <div class="stats" id="stats"></div>
+      </div>
+
+      <div class="card b-ws" id="wsCard" hidden>
+        <p class="cardHead" style="margin:0 .4rem .3rem">Temporary arrays inside merge() (extra memory)</p>
+        <div class="ws" id="ws"></div>
+      </div>
+
+      <div class="card b-tree" id="treeCard" hidden>
+        <p class="cardHead" id="treeHead">Every box is one function call</p>
+        <div class="stackbar" id="stackbar"></div>
+        <div class="treeScroll" id="treeScroll"><div class="tree" id="tree"></div></div>
+      </div>
+
+      <div class="b-console">
+        <p class="cardHead" style="margin-left:0">Program output (what <code>cout</code> prints)</p>
+        <div class="console" id="console"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="controls">
+  <div class="btns">
+    <button class="btn" id="restart">Restart</button>
+    <button class="btn" id="back">Back</button>
+    <button class="btn primary" id="play">Play</button>
+    <button class="btn primary" id="next">Next step</button>
+  </div>
+  <div class="scrub">
+    <input type="range" id="scrub" min="0" max="0" value="0" aria-label="Jump to a step">
+    <span class="stepinfo" id="stepinfo"></span>
+  </div>
+  <label class="opt">Speed
+    <select id="speed"><option value="0">Slow</option><option value="1" selected>Normal</option><option value="2">Fast</option></select>
+  </label>
+  <label class="opt" title="Highlights the next line first and hides the result until you press Next">
+    <input type="checkbox" id="predict"> Predict first
+  </label>
+  <span class="hint">Keys: ← back, → next, Space play</span>
+</footer>
+</div>
+
+<script>
+/*<GEN>*/
+const K=x=>`<b class="k">${x}</b>`,S=x=>`<b class="s">${x}</b>`,C=x=>`<b class="c">${x}</b>`,W=x=>`<b class="w">${x}</b>`,
+      LT=x=>`<b class="lt">${x}</b>`,RT=x=>`<b class="rt">${x}</b>`,CD=x=>`<code>${x}</code>`,B=x=>`<b>${x}</b>`;
+
+const CODE={};
+CODE.insertion=`
+void insertionSort(int arr[], int n) {
+    for (int i = 1; i < n; i++) {  //#forI
+        int key = arr[i];  // the card to insert  //#key
+        int j = i - 1;  // compare with left neighbour  //#jInit
+
+        while (j >= 0 && arr[j] > key) {  //#while
+            arr[j + 1] = arr[j];  // shift right  //#shift
+            j--;  // move left  //#dec
+        }
+
+        arr[j + 1] = key;  // j+1 is the gap  //#place
+
+        cout << "After pass " << i << ": ";  //#cout
+        printArray(arr, n);  //#print
+    }
+}`;
+CODE.selection=`
+void selectionSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {  //#forI
+        int minIndex = i;  // assume arr[i] is smallest  //#minInit
+
+        for (int j = i + 1; j < n; j++) {  //#forJ
+            if (arr[j] < arr[minIndex]) {  //#cmp
+                minIndex = j;  // remember new smallest  //#setMin
+            }
+        }
+
+        if (minIndex != i) {  //#ifSwap
+            int temp = arr[i];  //#t1
+            arr[i] = arr[minIndex];  //#t2
+            arr[minIndex] = temp;  //#t3
+        }
+
+        cout << "After pass " << i + 1 << ": ";  //#cout
+        printArray(arr, n);  //#print
+    }
+}`;
+CODE.merge=`
+void mergeSort(int arr[], int left, int right) {
+    if (left >= right) {  //#base
+        return;  //#ret
+    }
+
+    int mid = left + (right - left) / 2;  //#mid
+
+    mergeSort(arr, left, mid);  // left half  //#callL
+    mergeSort(arr, mid + 1, right);  // right half  //#callR
+    merge(arr, left, mid, right);  // combine them  //#callMerge
+
+    cout << "Merged [" << left << ".." << right << "]: ";  //#cout
+    for (int i = left; i <= right; i++) {  //#forp
+        cout << arr[i] << " ";  //#coutel
+    }
+    cout << endl;  //#endl
+}
+
+void merge(int arr[], int left, int mid, int right) {
+    int n1 = mid - left + 1;  // size of left part  //#n1
+    int n2 = right - mid;  // size of right part  //#n2
+
+    int L[MAX_SIZE];  // temp array for left  //#declL
+    int R[MAX_SIZE];  // temp array for right  //#declR
+
+    for (int i = 0; i < n1; i++) {  //#copyL
+        L[i] = arr[left + i];  //#copyLb
+    }
+    for (int j = 0; j < n2; j++) {  //#copyR
+        R[j] = arr[mid + 1 + j];  //#copyRb
+    }
+
+    int i = 0;  // index of L  //#i0
+    int j = 0;  // index of R  //#j0
+    int k = left;  // next slot in arr  //#k0
+
+    while (i < n1 && j < n2) {  //#while
+        if (L[i] <= R[j]) {  //#if
+            arr[k] = L[i];  //#takeL
+            i++;  //#iinc
+        } else {
+            arr[k] = R[j];  //#takeR
+            j++;  //#jinc
+        }
+        k++;  //#kinc
+    }
+
+    while (i < n1) {  // leftovers of L  //#restL
+        arr[k] = L[i];  //#restLb
+        i++;  //#restLi
+        k++;  //#restLk
+    }
+
+    while (j < n2) {  // leftovers of R  //#restR
+        arr[k] = R[j];  //#restRb
+        j++;  //#restRj
+        k++;  //#restRk
+    }
+}`;
+CODE.quick=`
+void quickSort(int arr[], int low, int high) {
+    if (low < high) {  //#check
+        int p = partition(arr, low, high);  //#callPart
+
+        cout << "Pivot " << arr[p] << " placed at index " << p << ": ";  //#cout
+        printArray(arr, high + 1);  //#print
+
+        quickSort(arr, low, p - 1);  // before the pivot  //#callL
+        quickSort(arr, p + 1, high);  // after the pivot  //#callR
+    }
+}
+
+int partition(int arr[], int low, int high) {
+    int pivot = arr[high];  // last element = pivot  //#pivot
+    int i = low - 1;  // edge of smaller zone  //#iInit
+
+    for (int j = low; j < high; j++) {  //#forJ
+        if (arr[j] <= pivot) {  //#cmp
+            i++;  //#iinc
+            swapValues(arr[i], arr[j]);  //#swap
+        }
+    }
+
+    swapValues(arr[i + 1], arr[high]);  //#swapPivot
+    return i + 1;  // pivot is now final  //#return
+}
+
+void swapValues(int &a, int &b) {
+    int temp = a;  //#sw1
+    a = b;  //#sw2
+    b = temp;  //#sw3
+}`;
+
+function parseCode(src){
+  const lines=src.replace(/^\n/,'').split('\n'), ids={};
+  const out=lines.map((t,i)=>{const m=t.match(/\s*\/\/#(\w+)\s*$/);if(m){t=t.slice(0,m.index);(ids[m[1]]=ids[m[1]]||[]).push(i);}return t.replace(/\s+$/,'');});
+  return {lines:out,ids};
+}
+
+/* ---------- Lab 1: Insertion Sort ---------- */
+function genInsertion(a){
+  const arr=a.slice(),n=arr.length,F=[],out=['Original array: '+arr.join(' ')];
+  let cmp=0,mv=0;
+  const P=o=>F.push(Object.assign({arr:arr.slice(),out:out.slice(),stats:[cmp,mv],lines:[],ptrs:[],tags:[],cells:{},vars:[],split:null,ws:null},o));
+  P({msg:`We start with ${B(arr.join(' '))}. Think of sorting playing cards: the first card (index 0) is a sorted hand of size 1. We add one card at a time.`,cells:{0:'sorted'}});
+  for(let i=1;i<n;i++){
+    const key=arr[i];
+    const cellsAt=(gap,extra)=>{const c={};for(let x=0;x<=i;x++)c[x]=x<gap?'sorted':x===gap?'gap':'moved';return Object.assign(c,extra||{});};
+    const sortedC=extra=>{const c={};for(let x=0;x<i;x++)c[x]='sorted';return Object.assign(c,extra||{});};
+    P({lines:['forI'],msg:`${B('Pass '+i+'.')} Look at the next card: index ${i} holds ${K(key)}. The cards on its left (${S(arr.slice(0,i).join(' '))}) are already sorted.`,
+       cells:sortedC({[i]:'next'}),ptrs:[{n:'i',idx:i}],vars:[['i',i]]});
+    P({lines:['key'],msg:`${CD('key = arr['+i+']')} so key = ${K(key)}. Pick this card up. Its old slot becomes an empty ${B('gap')}.`,
+       cells:cellsAt(i),ptrs:[{n:'i',idx:i}],tags:[{n:'key',idx:i,text:'key = '+key}],vars:[['i',i],['key',key]]});
+    let j=i-1;
+    const at=g=>({ptrs:[{n:'i',idx:i},{n:'j',idx:j}],tags:[{n:'key',idx:g,text:'key = '+key}],vars:[['i',i],['j',j],['key',key]]});
+    P({lines:['jInit'],msg:`${CD('j = i - 1')} so j = ${B(j)}. We start by comparing with the card just left of the gap.`,cells:cellsAt(j+1),...at(j+1)});
+    while(true){
+      const inR=j>=0; if(inR)cmp++;
+      const go=inR&&arr[j]>key;
+      let m;
+      if(!inR) m=`j = ${B('-1')}: we fell off the left edge. No cards are left to compare, so the loop stops.`;
+      else if(go) m=`Is ${C('arr['+j+'] = '+arr[j])} greater than ${K('key = '+key)}? ${B('Yes')}, so ${arr[j]} must move one step to the right.`;
+      else m=`Is ${C('arr['+j+'] = '+arr[j])} greater than ${K('key = '+key)}? ${B('No')}. It is already smaller, so the key belongs right after it. The loop stops.`;
+      P({lines:['while'],msg:m,cells:cellsAt(j+1,inR?{[j]:'cmp'}:{}),...at(j+1)});
+      if(!go)break;
+      arr[j+1]=arr[j];mv++;
+      P({lines:['shift'],msg:`Slide ${W(arr[j+1])} one step to the right: ${CD('arr['+(j+1)+'] = arr['+j+']')}. The gap moves left to index ${B(j)}.`,cells:cellsAt(j,{[j+1]:'swap'}),...at(j)});
+      j--;
+      P({lines:['dec'],msg:`${CD('j--')} so j = ${B(j)}. ${j<0?'There is no card left of the gap.':'Look at the next card on the left.'}`,cells:cellsAt(j+1),...at(j+1)});
+    }
+    arr[j+1]=key;
+    const c={};for(let x=0;x<=i;x++)c[x]='sorted';c[j+1]='placed';
+    P({lines:['place'],msg:`Drop the key into the gap: ${CD('arr['+(j+1)+'] = '+key)}. The first ${B(i+1)} cards are now sorted: ${S(arr.slice(0,i+1).join(' '))}.`,
+       cells:c,ptrs:[{n:'i',idx:i},{n:'j',idx:j}],vars:[['i',i],['j',j],['key',key]]});
+    out.push('After pass '+i+': '+arr.join(' '));
+    const c2={};for(let x=0;x<=i;x++)c2[x]='sorted';
+    P({lines:['cout','print'],msg:`Print the array after pass ${i}.`,cells:c2,ptrs:[{n:'i',idx:i}],vars:[['i',i]]});
+  }
+  out.push('Sorted array:   '+arr.join(' '));
+  const fc={};for(let x=0;x<n;x++)fc[x]='sorted';
+  P({msg:`${B('Sorted!')} ${S(arr.join(' '))}. It took ${B(cmp)} comparisons and ${B(mv)} shifts. Try the sorted data set: Insertion Sort only needs ${B(n-1)} comparisons there, which is why its best case is O(n).`,cells:fc});
+  return {frames:F};
+}
+
+/* ---------- Lab 2: Selection Sort ---------- */
+function genSelection(a){
+  const arr=a.slice(),n=arr.length,F=[],out=['Original array: '+arr.join(' ')];
+  let cmp=0,sw=0;
+  const P=o=>F.push(Object.assign({arr:arr.slice(),out:out.slice(),stats:[cmp,sw],lines:[],ptrs:[],tags:[],cells:{},vars:[],split:null,ws:null},o));
+  P({msg:`We start with ${B(arr.join(' '))}. Each pass we ${B('select')} the smallest number from the unsorted part and swap it to the front of that part.`});
+  for(let i=0;i<n-1;i++){
+    const base=o=>{const c={};for(let x=0;x<i;x++)c[x]='sorted';return Object.assign(c,o||{});};
+    let min=i;
+    const mt=()=>[{n:'min',idx:min,text:'min'}];
+    P({lines:['forI'],msg:`${B('Pass '+(i+1)+'.')} Index ${B(i)} is the next spot to fill. Find the smallest number among indexes ${i} to ${n-1}.`,
+       cells:base({[i]:'next'}),ptrs:[{n:'i',idx:i}],vars:[['i',i]]});
+    P({lines:['minInit'],msg:`Assume ${K('arr['+i+'] = '+arr[i])} is the smallest for now: ${CD('minIndex = '+i)}.`,
+       cells:base({[i]:'min'}),ptrs:[{n:'i',idx:i}],tags:mt(),vars:[['i',i],['minIndex',min]]});
+    P({lines:['forJ'],msg:`Scan the rest of the array. j starts at ${B(i+1)} and runs to ${n-1}.`,
+       cells:base({[min]:'min'}),ptrs:[{n:'i',idx:i},{n:'j',idx:i+1}],tags:mt(),vars:[['i',i],['j',i+1],['minIndex',min]]});
+    for(let j=i+1;j<n;j++){
+      cmp++;
+      const less=arr[j]<arr[min];
+      P({lines:['cmp'],msg:`Is ${C('arr['+j+'] = '+arr[j])} smaller than the smallest so far ${K(arr[min])}? ${B(less?'Yes':'No')}.`,
+         cells:base({[min]:'min',[j]:'cmp'}),ptrs:[{n:'i',idx:i},{n:'j',idx:j}],tags:mt(),vars:[['i',i],['j',j],['minIndex',min]]});
+      if(less){
+        min=j;
+        P({lines:['setMin'],msg:`New smallest found! ${CD('minIndex = '+j)}, the value is ${K(arr[j])}.`,
+           cells:base({[min]:'min'}),ptrs:[{n:'i',idx:i},{n:'j',idx:j}],tags:mt(),vars:[['i',i],['j',j],['minIndex',min]]});
+      }
+    }
+    P({lines:['forJ'],msg:`j reached ${B(n)}, so the scan is finished. The smallest number is ${K(arr[min])} at index ${B(min)}.`,
+       cells:base({[min]:'min'}),ptrs:[{n:'i',idx:i},{n:'j',idx:n}],tags:mt(),vars:[['i',i],['j',n],['minIndex',min]]});
+    if(min!==i){
+      const vs=[['i',i],['minIndex',min]];
+      P({lines:['ifSwap'],msg:`minIndex (${min}) is not equal to i (${i}), so the smallest number is not in place yet. We swap.`,
+         cells:base({[i]:'next',[min]:'min'}),ptrs:[{n:'i',idx:i}],tags:mt(),vars:vs});
+      const t=arr[i];
+      P({lines:['t1'],msg:`Save ${W('arr['+i+'] = '+t)} in a temporary box: ${CD('temp = '+t)}.`,
+         cells:base({[i]:'swap',[min]:'min'}),ptrs:[{n:'i',idx:i}],tags:mt(),vars:[...vs,['temp',t]]});
+      arr[i]=arr[min];
+      P({lines:['t2'],msg:`Copy the smallest number to the front: ${CD('arr['+i+'] = arr['+min+']')} which is ${K(arr[i])}.`,
+         cells:base({[i]:'swap',[min]:'min'}),ptrs:[{n:'i',idx:i}],tags:mt(),vars:[...vs,['temp',t]]});
+      arr[min]=t;sw++;
+      P({lines:['t3'],msg:`Put the saved number into the old slot: ${CD('arr['+min+'] = temp')} which is ${W(t)}. The swap is complete.`,
+         cells:base({[i]:'swap',[min]:'swap'}),ptrs:[{n:'i',idx:i}],vars:[...vs,['temp',t]]});
+    }else{
+      P({lines:['ifSwap'],msg:`minIndex (${min}) equals i (${i}), so ${K(arr[i])} is already in the right place. ${B('No swap')} needed.`,
+         cells:base({[i]:'min'}),ptrs:[{n:'i',idx:i}],tags:mt(),vars:[['i',i],['minIndex',min]]});
+    }
+    out.push('After pass '+(i+1)+': '+arr.join(' '));
+    const c={};for(let x=0;x<=i;x++)c[x]='sorted';
+    P({lines:['cout','print'],msg:`Print the array after pass ${i+1}. Index ${i} now holds its final value ${S(arr[i])}.`,cells:c,ptrs:[{n:'i',idx:i}],vars:[['i',i]]});
+  }
+  out.push('Sorted array:   '+arr.join(' '));
+  const fc={};for(let x=0;x<n;x++)fc[x]='sorted';
+  P({msg:`${B('Sorted!')} ${S(arr.join(' '))}. It took ${B(cmp)} comparisons and ${B(sw)} swaps. The comparison count is always n(n-1)/2 = ${n*(n-1)/2}, even if the data was already sorted.`,cells:fc});
+  return {frames:F};
+}
+
+/* ---------- Lab 3: Merge Sort ---------- */
+function genMerge(a){
+  const arr=a.slice(),n=arr.length,F=[],out=['Original array: '+arr.join(' ')];
+  let cmp=0,wr=0,nid=0;
+  const nodes=[],st={},stack=[];
+  const build=(l,r,d,parent)=>{const nd={id:nid++,l,r,d,parent,kids:[],frozen:null,mid:null};nodes.push(nd);st[nd.id]='hidden';
+    if(l<r){nd.mid=l+((r-l)>>1);nd.kids=[build(l,nd.mid,d+1,nd),build(nd.mid+1,r,d+1,nd)];}return nd;};
+  const root=build(0,n-1,0,null);
+  const snap=()=>{const t={};nodes.forEach(x=>{if(st[x.id]!=='hidden')t[x.id]=x.frozen||arr.slice(x.l,x.r+1);});return t;};
+  const P=o=>F.push(Object.assign({arr:arr.slice(),out:out.slice(),stats:[cmp,wr],lines:[],ptrs:[],tags:[],cells:{},vars:[],split:null,ws:null,
+    stack:stack.map(x=>x.id),tree:Object.assign({},st),tvals:snap(),tp:{}},o));
+  const rc=(l,r,mid,written)=>{const c={};for(let x=0;x<n;x++){
+    if(x<l||x>r)c[x]='dim';else if(mid==null)c[x]='act';else if(x<l+(written||0))c[x]='merged';else c[x]=x<=mid?'lt':'rt';}return c;};
+  const enter=nd=>{if(nd.parent)st[nd.parent.id]='wait';st[nd.id]='active';stack.push(nd);};
+  const leave=nd=>{nd.frozen=arr.slice(nd.l,nd.r+1);st[nd.id]='done';stack.pop();if(nd.parent)st[nd.parent.id]='active';};
+
+  const doMerge=nd=>{
+    const {l,r,mid}=nd,n1=mid-l+1,n2=r-mid,Lv=arr.slice(l,mid+1),Rv=arr.slice(mid+1,r+1);
+    const vs=[['left',l],['mid',mid],['right',r]];
+    const vs2=[...vs,['n1',n1],['n2',n2]];
+    P({lines:['callMerge'],msg:`Both halves are sorted now: ${LT('left = '+Lv.join(' '))} and ${RT('right = '+Rv.join(' '))}. Call ${CD('merge(arr, '+l+', '+mid+', '+r+')')} to combine them into one sorted run.`,
+       cells:rc(l,r,mid),split:mid,vars:vs});
+    P({lines:['n1','n2'],msg:`${CD('n1 = mid - left + 1')} = ${B(n1)} is the size of the left part. ${CD('n2 = right - mid')} = ${B(n2)} is the size of the right part.`,
+       cells:rc(l,r,mid),split:mid,vars:vs2});
+    P({lines:['declL','declR'],msg:`Create two ${B('temporary arrays')}, L and R. This extra memory is why Merge Sort needs O(n) space.`,
+       cells:rc(l,r,mid),split:mid,ws:{L:Array(n1).fill(null),R:Array(n2).fill(null)},vars:vs2});
+    P({lines:['copyL','copyLb'],msg:`Copy the left part into L. The loop runs ${n1} time${n1>1?'s':''}, so ${LT('L = '+Lv.join(' '))}.`,
+       cells:rc(l,r,mid),split:mid,ws:{L:Lv,R:Array(n2).fill(null)},vars:vs2});
+    P({lines:['copyR','copyRb'],msg:`Copy the right part into R. The loop runs ${n2} time${n2>1?'s':''}, so ${RT('R = '+Rv.join(' '))}.`,
+       cells:rc(l,r,mid),split:mid,ws:{L:Lv,R:Rv},vars:vs2});
+    let i=0,j=0,k=l;
+    const W_=o=>Object.assign({L:Lv,R:Rv,i,j,usedL:i,usedR:j},o||{});
+    const V=()=>[...vs2,['i',i],['j',j],['k',k]];
+    P({lines:['i0','j0','k0'],msg:`Set three pointers: i = 0 (front of L), j = 0 (front of R), and k = left = ${B(k)} (the next slot of arr to fill).`,
+       cells:rc(l,r,mid,0),split:mid,ws:W_(),ptrs:[{n:'k',idx:k}],vars:V()});
+    while(i<n1&&j<n2){
+      cmp++;
+      const left=Lv[i]<=Rv[j];
+      P({lines:['while','if'],msg:`Compare the fronts: is ${LT('L['+i+'] = '+Lv[i])} ≤ ${RT('R['+j+'] = '+Rv[j])}? ${B(left?'Yes':'No')}, so take ${B(left?Lv[i]:Rv[j])} from ${left?'L':'R'}.`,
+         cells:rc(l,r,mid,k-l),split:mid,ws:W_({hiL:i,hiR:j}),ptrs:[{n:'k',idx:k}],vars:V()});
+      const kk=k;
+      if(left){arr[k]=Lv[i];i++;}else{arr[k]=Rv[j];j++;}
+      wr++;k++;
+      P({lines:left?['takeL','iinc','kinc']:['takeR','jinc','kinc'],
+         msg:`${CD('arr['+kk+'] = '+arr[kk])}, then ${left?'i':'j'}++ and k++. Merged so far: ${S(arr.slice(l,k).join(' '))}`,
+         cells:Object.assign(rc(l,r,mid,k-l),{[kk]:'placed'}),split:mid,ws:W_(),ptrs:[{n:'k',idx:k}],vars:V()});
+    }
+    const lr=n1-i,rr=n2-j;
+    P({lines:['while'],msg:lr>0?`${CD('i < n1 && j < n2')} is now false: R is used up. ${B(lr)} number${lr>1?'s':''} left in L, and they are already sorted.`
+        :rr>0?`${CD('i < n1 && j < n2')} is now false: L is used up. ${B(rr)} number${rr>1?'s':''} left in R, and they are already sorted.`:`Both sides are used up. Nothing is left to copy.`,
+       cells:rc(l,r,mid,k-l),split:mid,ws:W_(),ptrs:[{n:'k',idx:k}],vars:V()});
+    while(i<n1){
+      const kk=k;arr[k]=Lv[i];wr++;i++;k++;
+      P({lines:['restL','restLb','restLi','restLk'],msg:`Copy a leftover from L: ${CD('arr['+kk+'] = '+arr[kk])}, then i++ and k++.`,
+         cells:Object.assign(rc(l,r,mid,k-l),{[kk]:'placed'}),split:mid,ws:W_(),ptrs:[{n:'k',idx:k}],vars:V()});
+    }
+    while(j<n2){
+      const kk=k;arr[k]=Rv[j];wr++;j++;k++;
+      P({lines:['restR','restRb','restRj','restRk'],msg:`Copy a leftover from R: ${CD('arr['+kk+'] = '+arr[kk])}, then j++ and k++.`,
+         cells:Object.assign(rc(l,r,mid,k-l),{[kk]:'placed'}),split:mid,ws:W_(),ptrs:[{n:'k',idx:k}],vars:V()});
+    }
+  };
+
+  const ms=nd=>{
+    const {l,r}=nd;enter(nd);
+    const v0=[['left',l],['right',r]];
+    if(l>=r){
+      P({lines:['base'],msg:`${B('mergeSort('+l+', '+r+')')}: is left ≥ right? ${l} ≥ ${r} is ${B('true')}. Only one number is here (${K(arr[l])}), and one number is already sorted. This is the ${B('base case')}.`,cells:rc(l,r),vars:v0});
+      P({lines:['ret'],msg:`${CD('return')}: go back to the call that started this one.`,cells:rc(l,r),vars:v0});
+      leave(nd);return;
+    }
+    const mid=nd.mid,v1=[...v0,['mid',mid]];
+    P({lines:['base'],msg:`${B('mergeSort('+l+', '+r+')')}: is left ≥ right? ${l} ≥ ${r} is ${B('false')}. There is more than one number, so keep splitting.`,cells:rc(l,r),vars:v0});
+    P({lines:['mid'],msg:`Find the middle: ${CD('mid = '+l+' + ('+r+' - '+l+') / 2')} = ${B(mid)}. ${LT('Left half')} = indexes ${l} to ${mid}. ${RT('Right half')} = indexes ${mid+1} to ${r}.`,
+       cells:rc(l,r,mid),split:mid,vars:v1});
+    P({lines:['callL'],msg:`Call ${B('mergeSort('+l+', '+mid+')')} on the ${LT('left half')}. This call waits until that one finishes.`,cells:rc(l,r,mid),split:mid,vars:v1});
+    ms(nd.kids[0]);
+    P({lines:['callR'],msg:`The left half came back sorted. Now call ${B('mergeSort('+(mid+1)+', '+r+')')} on the ${RT('right half')}.`,cells:rc(l,r,mid),split:mid,vars:v1});
+    ms(nd.kids[1]);
+    doMerge(nd);
+    out.push('Merged ['+l+'..'+r+']: '+arr.slice(l,r+1).join(' '));
+    P({lines:['cout','forp','coutel','endl'],msg:`Merge finished. Indexes ${l} to ${r} are sorted: ${S(arr.slice(l,r+1).join(' '))}. The program prints this line.`,
+       cells:rc(l,r,mid,r-l+1),vars:[['left',l],['mid',mid],['right',r]]});
+    leave(nd);
+  };
+  P({msg:`We start with ${B(arr.join(' '))}. Merge Sort uses ${B('divide and conquer')}: split until every piece has one number, then merge the pieces back in order.`});
+  P({msg:`${CD('main()')} calls ${B('mergeSort(arr, 0, '+(n-1)+')')}. Remember: these are ${B('index')} values (first and last), not the size of the array.`});
+  ms(root);
+  out.push('Sorted array:   '+arr.join(' '));
+  const fc={};for(let x=0;x<n;x++)fc[x]='sorted';
+  P({msg:`${B('Sorted!')} ${S(arr.join(' '))}. ${B(nodes.filter(x=>x.l<x.r).length)} merges, ${B(cmp)} comparisons, ${B(wr)} copies into arr. The work is always about n log n, but we used extra arrays.`,cells:fc});
+  return {frames:F,nodes:nodes.map(x=>({id:x.id,l:x.l,r:x.r,d:x.d,parent:x.parent?x.parent.id:null,kind:'range',cx:(x.l+x.r)/2+.5})),label:x=>`mergeSort(${x.l}, ${x.r})`};
+}
+
+/* ---------- Lab 4: Quick Sort ---------- */
+function genQuick(a){
+  const arr=a.slice(),n=arr.length,F=[],out=['Original array: '+arr.join(' ')];
+  let cmp=0,sw=0,nid=0;
+  const nodes=[],st={},stack=[],locked=new Set();
+  const mk=(low,high,parent)=>{const nd={id:nid++,low,high,parent,d:parent?parent.d+1:0,p:null,frozen:null,kind:low>high?'empty':'range',pp:parent?parent.p:null};nodes.push(nd);st[nd.id]='hidden';return nd;};
+  const snap=()=>{const t={},p={};nodes.forEach(x=>{if(st[x.id]!=='hidden'&&x.kind!=='empty')t[x.id]=x.frozen||arr.slice(x.low,x.high+1);if(x.p!=null)p[x.id]=x.p;});return [t,p];};
+  const P=o=>{const [tv,tp]=snap();F.push(Object.assign({arr:arr.slice(),out:out.slice(),stats:[cmp,sw],lines:[],ptrs:[],tags:[],cells:{},vars:[],split:null,ws:null,
+    stack:stack.map(x=>x.id),tree:Object.assign({},st),tvals:tv,tp:tp},o));};
+  const enter=nd=>{if(nd.parent)st[nd.parent.id]='wait';st[nd.id]='active';stack.push(nd);};
+  const leave=nd=>{if(nd.kind!=='empty')nd.frozen=arr.slice(nd.low,nd.high+1);st[nd.id]='done';stack.pop();if(nd.parent)st[nd.parent.id]='active';};
+
+  const qs=nd=>{
+    const {low,high}=nd;enter(nd);
+    const v0=[['low',low],['high',high]];
+    const rc=extra=>{const c={};for(let x=0;x<n;x++)c[x]=locked.has(x)?'locked':(x<low||x>high)?'dim':'act';return Object.assign(c,extra||{});};
+    if(low>=high){
+      const empty=low>high;
+      P({lines:['check'],msg:empty?`${B('quickSort('+low+', '+high+')')}: is low < high? ${low} < ${high} is ${B('false')}. The range is empty, so there is nothing to sort. The call ends at once.`
+        :`${B('quickSort('+low+', '+high+')')}: is low < high? ${low} < ${high} is ${B('false')}. Only one number is left (${S(arr[low])}). It is already in its final place.`,
+        cells:rc(empty?{}:{[low]:'locked'}),vars:v0});
+      if(!empty)locked.add(low);
+      leave(nd);return;
+    }
+    P({lines:['check'],msg:`${B('quickSort('+low+', '+high+')')}: is low < high? ${low} < ${high} is ${B('true')}. There are at least 2 numbers, so we partition ${B(arr.slice(low,high+1).join(' '))}.`,cells:rc(),vars:v0});
+    P({lines:['callPart'],msg:`Call ${B('partition(arr, '+low+', '+high+')')}. It picks a pivot, rearranges the numbers around it, and tells us the pivot's final index.`,cells:rc(),vars:v0});
+    const pivot=arr[high];
+    const zones=(i,j,extra)=>{const c=rc();for(let x=low;x<high;x++){if(locked.has(x))continue;c[x]=x<=i?'small':x<j?'big':'act';}c[high]='pivot';return Object.assign(c,extra||{});};
+    const pt=[{n:'pivot',idx:high,text:'pivot = '+pivot}];
+    let i=low-1;
+    P({lines:['pivot'],msg:`${CD('pivot = arr[high]')} = ${K(pivot)}. We always take the last number in the range as the pivot.`,cells:zones(i,low),tags:pt,vars:[...v0,['pivot',pivot]]});
+    P({lines:['iInit'],msg:`${CD('i = low - 1')} = ${B(i)}. Think of i as the right edge of the ${S('smaller-than-pivot zone')}. That zone is empty right now.`,
+       cells:zones(i,low),ptrs:[{n:'i',idx:i}],tags:pt,vars:[...v0,['pivot',pivot],['i',i]]});
+    for(let j=low;j<high;j++){
+      cmp++;
+      const yes=arr[j]<=pivot;
+      P({lines:['forJ','cmp'],msg:`j = ${B(j)}: is ${C('arr['+j+'] = '+arr[j])} ≤ pivot ${K(pivot)}? ${B(yes?'Yes':'No')}. ${yes?'It belongs in the smaller zone.':'It stays on the bigger side for now.'}`,
+         cells:zones(i,j,{[j]:'cmp'}),ptrs:[{n:'i',idx:i},{n:'j',idx:j}],tags:pt,vars:[...v0,['pivot',pivot],['i',i],['j',j]]});
+      if(yes){
+        i++;
+        const same=i===j;
+        const x=arr[i];arr[i]=arr[j];arr[j]=x;if(!same)sw++;
+        P({lines:['iinc','swap','sw1','sw2','sw3'],
+           msg:same?`${CD('i++')} makes i = ${B(i)}. ${CD('swapValues(arr['+i+'], arr['+j+'])')} swaps a cell with itself, so nothing moves. The smaller zone just grew by one.`
+                  :`${CD('i++')} makes i = ${B(i)}. ${CD('swapValues(arr['+i+'], arr['+j+'])')} swaps them: ${S(arr[i])} joins the smaller zone and ${arr[j]} goes to the bigger side.`,
+           cells:zones(i,j+1,{[i]:'swap',[j]:'swap'}),ptrs:[{n:'i',idx:i},{n:'j',idx:j}],tags:pt,vars:[...v0,['pivot',pivot],['i',i],['j',j]]});
+      }
+    }
+    P({lines:['forJ'],msg:`j reached ${B(high)}, the pivot's own position, so the loop ends. Every number that is ≤ pivot sits in the ${S('smaller zone')} (indexes ${low} to ${i<low?'none':i}).`,
+       cells:zones(i,high),ptrs:[{n:'i',idx:i},{n:'j',idx:high}],tags:pt,vars:[...v0,['pivot',pivot],['i',i],['j',high]]});
+    const t=i+1,same=t===high;
+    const y=arr[t];arr[t]=arr[high];arr[high]=y;if(!same)sw++;
+    P({lines:['swapPivot','sw1','sw2','sw3'],
+       msg:same?`${CD('swapValues(arr[i + 1], arr[high])')}: the pivot is already right after the smaller zone, so nothing moves.`
+              :`Put the pivot between the two zones: swap ${CD('arr[i + 1]')} (index ${t}) with ${CD('arr[high]')} (index ${high}).`,
+       cells:zones(i,high,{[t]:'swap',[high]:'swap'}),ptrs:[{n:'i',idx:i}],vars:[...v0,['pivot',pivot],['i',i]]});
+    nd.p=t;locked.add(t);
+    const pz=()=>{const c=rc();for(let x=low;x<=high;x++){if(x===t)c[x]='locked';else if(!locked.has(x))c[x]=x<t?'small':'big';}return c;};
+    P({lines:['return'],msg:`${CD('return i + 1')} = ${B(t)}. The pivot ${K(pivot)} now sits at index ${t}, its ${S('final sorted position')}. Everything on its left is ≤ ${pivot}. Everything on its right is bigger.`,
+       cells:pz(),vars:[...v0,['p',t]]});
+    out.push('Pivot '+arr[t]+' placed at index '+t+': '+arr.slice(0,high+1).join(' '));
+    P({lines:['cout','print'],msg:`The program prints: pivot ${B(arr[t])} placed at index ${t}. (It prints arr[0] up to arr[high].)`,cells:pz(),vars:[...v0,['p',t]]});
+    const kl=mk(low,t-1,nd),kr=mk(t+1,high,nd);
+    P({lines:['callL'],msg:`Now sort everything ${S('left')} of the pivot: ${B('quickSort('+low+', '+(t-1)+')')}.${t-1<low?' That range is empty.':''}`,cells:pz(),vars:[...v0,['p',t]]});
+    qs(kl);
+    P({lines:['callR'],msg:`The left part is done. Now sort everything ${RT('right')} of the pivot: ${B('quickSort('+(t+1)+', '+high+')')}.${t+1>high?' That range is empty.':''}`,cells:pz(),vars:[...v0,['p',t]]});
+    qs(kr);
+    leave(nd);
+  };
+  P({msg:`We start with ${B(arr.join(' '))}. Quick Sort picks a ${B('pivot')}, puts smaller numbers on its left and bigger numbers on its right, and repeats on each side.`});
+  P({msg:`${CD('main()')} calls ${B('quickSort(arr, 0, '+(n-1)+')')}. These are ${B('index')} values (first and last), not the size of the array.`});
+  const root=mk(0,n-1,null);
+  qs(root);
+  out.push('Sorted array:   '+arr.join(' '));
+  const fc={};for(let x=0;x<n;x++)fc[x]='sorted';
+  const ncall=nodes.filter(x=>x.kind!=='empty'&&x.low<x.high).length;
+  P({msg:`${B('Sorted!')} ${S(arr.join(' '))}. ${B(ncall)} partition${ncall>1?'s':''}, ${B(cmp)} comparisons, ${B(sw)} swaps. Try the sorted data set: the last-element pivot is the worst choice there, and the tree becomes a long chain (O(n²)).`,cells:fc});
+  nodes.forEach(x=>{x.cx=x.kind==='empty'?x.parent.p+.5:(x.low+x.high)/2+.5;});
+  return {frames:F,nodes:nodes.map(x=>({id:x.id,l:x.low,r:x.high,d:x.d,parent:x.parent?x.parent.id:null,kind:x.kind,cx:x.cx})),label:x=>`quickSort(${x.l}, ${x.r})`};
+}
+/*</GEN>*/
+
+/* =================== UI =================== */
+const $=s=>document.querySelector(s);
+const ALGOS={
+  insertion:{lab:1,name:'Insertion',title:'Lab 1: Insertion Sort',gen:genInsertion,stats:['Comparisons','Shifts'],tree:false,
+    legend:[['sorted','Sorted part'],['key','Key in hand'],['cmp','Compared with key'],['moved','Shifted right'],['gap','Gap for the key']],note:'insertionSort() from Lab 1'},
+  selection:{lab:2,name:'Selection',title:'Lab 2: Selection Sort',gen:genSelection,stats:['Comparisons','Swaps'],tree:false,
+    legend:[['sorted','Sorted (final)'],['min','Smallest so far'],['cmp','Being checked'],['swap','Swapping'],['next','Spot to fill']],note:'selectionSort() from Lab 2'},
+  merge:{lab:3,name:'Merge',title:'Lab 3: Merge Sort',gen:genMerge,stats:['Comparisons','Copies into arr'],tree:true,
+    legend:[['lt','Left half'],['rt','Right half'],['placed','Just written'],['merged','Merged (sorted)'],['dim','Not in this call']],note:'mergeSort() runs first and calls merge(). Shown in that order.'},
+  quick:{lab:4,name:'Quick',title:'Lab 4: Quick Sort',gen:genQuick,stats:['Comparisons','Swaps'],tree:true,
+    legend:[['pivot','Pivot'],['small','Smaller zone (≤ pivot)'],['big','Bigger zone'],['cmp','Checking j'],['locked','Final position'],['dim','Not in this call']],note:'quickSort() runs first and calls partition(). Shown in that order.'}
+};
+Object.values(ALGOS).forEach(a=>{});
+ALGOS.insertion.code=parseCode(CODE.insertion);ALGOS.selection.code=parseCode(CODE.selection);
+ALGOS.merge.code=parseCode(CODE.merge);ALGOS.quick.code=parseCode(CODE.quick);
+
+const PRESETS=[['Manual data','29 10 14 37 13'],['Set A','64 34 25 12 22 11 90'],['Set B sorted','1 2 3 4 5 6'],['Set C reverse','9 8 7 6 5 4'],['Set D duplicates','5 3 5 1 3']];
+const SPEEDS=[2600,1600,800];
+const S_={algo:'insertion',data:[29,10,14,37,13],frames:[],meta:null,idx:0,mode:'full',playing:false,timer:null,predict:false,painted:null,seen:new Set()};
+let LAY=null,cellEls=[],ptrEls=new Map(),lineEls=[];
+
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function syn(line){
+  let code=line,com='';const ci=line.indexOf('//');
+  if(ci>=0){code=line.slice(0,ci);com=line.slice(ci);}
+  let h=esc(code).replace(/"(?:[^"\\]|\\.)*"/g,m=>`<span class="st">${m}</span>`)
+    .replace(/\b(int|void|const)\b/g,'<span class="ty">$1</span>')
+    .replace(/\b(for|while|if|else|return|cout|endl)\b/g,'<span class="kw">$1</span>')
+    .replace(/(?<![\w">])(\d+)(?![\w"<])/g,'<span class="nu">$1</span>');
+  if(com)h+=`<span class="cm">${esc(com)}</span>`;
+  return h;
+}
+
+/* ----- layout of the array board ----- */
+function layout(){
+  const n=S_.data.length,board=$('#board');
+  const W=Math.max(280,board.clientWidth||600);
+  const step=Math.max(40,Math.min(92,Math.floor(W/(n+1.6))));
+  const cell=step-10,pad=(W-n*step)/2;
+  LAY={n,W,step,cell,pad,above:60,idx:22,below:58};
+  board.style.height=(LAY.above+cell+LAY.idx+LAY.below)+'px';
+  board.querySelectorAll('.cell,.ptr,.tag').forEach(e=>e.remove());
+  ptrEls.clear();cellEls=[];
+  const fs=Math.max(16,Math.min(30,cell*.42));
+  for(let x=0;x<n;x++){
+    const c=el('div','cell','<span class="v"></span><span class="ix">'+x+'</span>');
+    c.style.left=(pad+x*step+(step-cell)/2)+'px';c.style.top=LAY.above+'px';
+    c.style.width=c.style.height=cell+'px';c.style.fontSize=fs+'px';
+    board.appendChild(c);cellEls.push(c);
+  }
+  document.documentElement.style.setProperty('--wc',Math.round(cell*.78)+'px');
+  S_.painted=null;
+}
+
+function setMarkers(items,kind){
+  const board=$('#board'),seen=new Set(),cnt={};
+  (items||[]).forEach(it=>{
+    const key=kind+':'+it.n;seen.add(key);
+    let e=ptrEls.get(key);
+    if(!e){e=el('div',kind==='below'?'ptr':'tag');board.appendChild(e);ptrEls.set(key,e);e.style.opacity=0;
+      e.style.left=(LAY.pad+(it.idx+.5)*LAY.step)+'px';}
+    const off=it.idx<0||it.idx>=LAY.n;
+    e.className=(kind==='below'?'ptr':'tag')+' n-'+it.n;
+    e.textContent=kind==='below'?(off?`${it.n} = ${it.idx}`:it.n):it.text;
+    e.style.left=(LAY.pad+(it.idx+.5)*LAY.step)+'px';
+    if(kind==='below'){const c=cnt[it.idx]=(cnt[it.idx]||0)+1;e.style.top=(LAY.above+LAY.cell+LAY.idx+(c-1)*28)+'px';}
+    else e.style.top=(LAY.above-10)+'px';
+    e.style.opacity=1;
+  });
+  ptrEls.forEach((e,key)=>{if(key.startsWith(kind+':')&&!seen.has(key))e.style.opacity=0;});
+}
+
+/* ----- painting one frame ----- */
+function paint(f){
+  const A=ALGOS[S_.algo],prev=S_.painted;
+  for(let x=0;x<LAY.n;x++){
+    const c=cellEls[x],cls=f.cells[x];
+    c.className='cell'+(cls?' s-'+cls:'');
+    const v=c.firstChild,nv=String(f.arr[x]);
+    if(v.textContent!==nv){v.textContent=nv;if(prev){void c.offsetWidth;c.classList.add('pop');}}
+  }
+  setMarkers(f.ptrs,'below');setMarkers(f.tags,'above');
+  const sp=$('#split');
+  if(f.split!=null){sp.style.left=(LAY.pad+(f.split+1)*LAY.step)+'px';sp.style.top=(LAY.above-8)+'px';sp.style.height=(LAY.cell+16)+'px';sp.style.opacity=.55;}
+  else sp.style.opacity=0;
+  // merge workspace
+  $('#wsCard').hidden=!f.ws;
+  if(f.ws){
+    const ws=f.ws,row=(name,vals,ptr,used,hi,cls)=>{
+      let h=`<div class="wsrow"><span class="wsl ${name}">${name}</span><div class="wcells">`;
+      vals.forEach((v,t)=>{
+        const st=(v==null)?' empty':(t<used?' s-used':'')+(t===hi?' s-cmp':'');
+        h+=`<div class="wc"><div class="wcell ${cls}${st}">${v==null?'':v}</div><div class="wp ${name==='L'?'i':'j'}">${ptr===t?(name==='L'?'i':'j'):''}</div></div>`;
+      });
+      if(ptr!=null&&ptr>=vals.length)h+=`<div class="wc"><div class="wcell empty"></div><div class="wp ${name==='L'?'i':'j'}">${name==='L'?'i':'j'}</div></div>`;
+      return h+'</div></div>';
+    };
+    $('#ws').innerHTML=row('L',ws.L,ws.i,ws.usedL||0,ws.hiL,'tl')+row('R',ws.R,ws.j,ws.usedR||0,ws.hiR,'tr');
+  }
+  // variables
+  const pv={};if(prev)(prev.vars||[]).forEach(([k,v])=>pv[k]=v);
+  $('#vars').innerHTML=f.vars.map(([k,v])=>`<span class="var${prev&&pv[k]!==v?' chg':''}"><b>${k}</b> = ${v}</span>`).join('');
+  $('#stats').innerHTML=A.stats.map((l,t)=>`<span class="stat">${l} <b>${f.stats[t]}</b></span>`).join('');
+  // console
+  const con=$('#console'),pl=prev?prev.out.length:0;
+  con.innerHTML=f.out.map((l,t)=>`<div${t>=pl&&t===f.out.length-1&&f.out.length>pl&&prev?' class="new"':''}>${esc(l)}</div>`).join('');
+  con.scrollTop=con.scrollHeight;
+  if(A.tree)paintTree(f);
+  S_.painted=f;
+}
+
+function paintTree(f){
+  const M=S_.meta,nodes=M.nodes,rowH=54,nodeH=40;
+  const TW=Math.max(260,$('#treeScroll').clientWidth||LAY.W),N=LAY.n;
+  const step=Math.max(30,Math.min(84,Math.floor(TW/(N+.8)))),pad=(TW-N*step)/2;
+  const byId={};nodes.forEach(x=>byId[x.id]=x);
+  const rows=Math.max(...nodes.map(x=>x.d))+1;
+  const tree=$('#tree');tree.style.height=(rows*rowH-10)+'px';tree.style.width=TW+'px';
+  const vis=id=>f.tree[id]&&f.tree[id]!=='hidden';
+  const pos={};
+  nodes.forEach(nd=>{
+    const w=nd.kind==='empty'?32:Math.max(step-6,(nd.r-nd.l+1)*step-8);
+    pos[nd.id]={x:pad+nd.cx*step,w,top:nd.d*rowH};
+  });
+  let svg=`<svg width="${TW}" height="${rows*rowH}">`,html='';
+  const seenNow=new Set();
+  nodes.forEach(nd=>{
+    if(!vis(nd.id))return;
+    seenNow.add(nd.id);
+    const p=pos[nd.id],state=f.tree[nd.id];
+    if(nd.parent!=null&&vis(nd.parent)){
+      const q=pos[nd.parent],y1=q.top+nodeH,y2=p.top,ym=(y1+y2)/2;
+      svg+=`<path d="M${q.x} ${y1} C ${q.x} ${ym}, ${p.x} ${ym}, ${p.x} ${y2}" fill="none" stroke="currentColor" stroke-width="2" opacity=".55"/>`;
+    }
+    const fresh=S_.seen.has(nd.id)?'':' fresh';
+    if(nd.kind==='empty'){
+      html+=`<div class="tn ${state}${fresh}" style="left:${p.x-p.w/2}px;top:${p.top}px;width:${p.w}px"><div class="tv" style="grid-template-columns:1fr">∅</div><div class="tl">empty</div></div>`;
+    }else{
+      const vals=f.tvals[nd.id]||[],pp=f.tp[nd.id];
+      html+=`<div class="tn ${state}${fresh}" style="left:${p.x-p.w/2}px;top:${p.top}px;width:${p.w}px"><div class="tv" style="grid-template-columns:repeat(${vals.length},1fr)">`+
+        vals.map((v,t)=>`<span${pp!=null&&nd.l+t===pp?' class="piv"':''}>${v}</span>`).join('')+`</div><div class="tl">${M.label(nd).replace(/^\w+/,'')}</div></div>`;
+    }
+  });
+  tree.innerHTML=svg+'</svg>'+html;
+  seenNow.forEach(id=>S_.seen.add(id));
+  $('#stackbar').innerHTML='<span class="lab">Calls waiting (newest on the right)</span>'+
+    (f.stack.length?f.stack.map((id,t)=>`<span class="sk${t===f.stack.length-1?' top':''}">${M.label(byId[id])}</span>`).join('<span class="sep">›</span>'):'<span class="sk">none yet</span>');
+  // keep the active call in view inside the tree box
+  const scr=$('#treeScroll'),act=nodes.find(x=>f.tree[x.id]==='active');
+  if(act){const top=pos[act.id].top,bot=top+nodeH+8;
+    if(top<scr.scrollTop)scr.scrollTop=top;else if(bot>scr.scrollTop+scr.clientHeight)scr.scrollTop=bot-scr.clientHeight;}
+  if(!seenNow.size)tree.innerHTML='<div class="emptyNote">The tree grows here as the function calls itself.</div>';
+}
+
+function showLines(ids){
+  const A=ALGOS[S_.algo],on=new Set();
+  ids.forEach(id=>{const l=A.code.ids[id];if(l)l.forEach(i=>on.add(i));else console.warn('missing line id',id);});
+  lineEls.forEach((e,i)=>e.classList.toggle('on',on.has(i)));
+  if(on.size){
+    const first=Math.min(...on),e=lineEls[first],box=$('#code');
+    const top=e.offsetTop,h=e.offsetHeight,vis0=box.scrollTop,vis1=vis0+box.clientHeight;
+    const last=lineEls[Math.max(...on)],bottom=last.offsetTop+last.offsetHeight;
+    if(top<vis0+20||bottom>vis1-20)box.scrollTop=Math.max(0,top-box.clientHeight*.3);
+  }
+}
+
+function render(){
+  const f=S_.frames[S_.idx];
+  const ask=S_.predict&&S_.mode==='ask'&&S_.idx>0&&f.lines.length>0;
+  const vf=ask?S_.frames[S_.idx-1]:f;
+  showLines(f.lines);
+  const say=$('#say');
+  say.classList.toggle('ask',ask);
+  say.innerHTML='<div>'+(ask?`${B('Look at the highlighted line.')} What will it do to the array and the variables? Say your guess, then press ${B('Next step')} to check.`:f.msg)+'</div>';
+  paint(vf);
+  const last=S_.frames.length-1;
+  $('#scrub').max=last;$('#scrub').value=S_.idx;
+  $('#stepinfo').textContent='Step '+(S_.idx+1)+' of '+(last+1);
+  $('#back').disabled=S_.idx===0;
+  const atEnd=S_.idx===last&&!(S_.predict&&S_.mode==='ask');
+  $('#next').disabled=atEnd;
+  $('#play').disabled=S_.predict;
+  $('#play').textContent=S_.playing?'Pause':(atEnd?'Replay':'Play');
+}
+
+/* ----- player ----- */
+function next(){
+  const last=S_.frames.length-1;
+  if(S_.predict){
+    if(S_.mode==='ask'){S_.mode='full';}
+    else if(S_.idx<last){S_.idx++;S_.mode=S_.frames[S_.idx].lines.length?'ask':'full';}
+  }else if(S_.idx<last){S_.idx++;}
+  render();
+}
+function back(){
+  if(S_.idx>0){S_.idx--;S_.mode='full';}
+  render();
+}
+function stop(){S_.playing=false;clearTimeout(S_.timer);}
+function tick(){
+  if(!S_.playing)return;
+  if(S_.idx>=S_.frames.length-1){stop();render();return;}
+  S_.idx++;S_.mode='full';render();
+  S_.timer=setTimeout(tick,SPEEDS[+$('#speed').value]);
+}
+function togglePlay(){
+  if(S_.predict)return;
+  if(S_.playing){stop();render();return;}
+  if(S_.idx>=S_.frames.length-1)S_.idx=0;
+  S_.playing=true;render();
+  S_.timer=setTimeout(tick,SPEEDS[+$('#speed').value]);
+}
+function restart(){stop();S_.idx=0;S_.mode='full';render();}
+
+/* ----- setup ----- */
+function drawCode(){
+  const A=ALGOS[S_.algo];
+  $('#codeHead').textContent=A.note;
+  const box=$('#code');box.innerHTML='';box.scrollTop=0;lineEls=[];
+  A.code.lines.forEach((t,i)=>{const d=el('div','ln',`<span class="no">${i+1}</span><span class="tx">${syn(t)||' '}</span>`);box.appendChild(d);lineEls.push(d);});
+}
+function drawLegend(){
+  $('#legend').innerHTML=ALGOS[S_.algo].legend.map(([c,l])=>`<span><i class="cell s-${c}" style="position:static;display:inline-block"></i>${l}</span>`).join('');
+}
+function setAlgo(key){
+  stop();S_.algo=key;
+  document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t.dataset.k===key));
+  const A=ALGOS[key];
+  document.title=A.title+': dry run';
+  regen();
+}
+function regen(){
+  const A=ALGOS[S_.algo],g=A.gen(S_.data);
+  S_.frames=g.frames;S_.meta=g;S_.idx=0;S_.mode='full';S_.seen=new Set();
+  $('#treeCard').hidden=!A.tree;$('#cols').classList.toggle('has-tree',!!A.tree);
+  $('#treeHead').textContent=S_.algo==='merge'?'Recursion tree: every box is one call of mergeSort':'Recursion tree: every box is one call of quickSort';
+  drawCode();drawLegend();layout();render();
+}
+function setData(arr){
+  stop();S_.data=arr;
+  document.querySelectorAll('#presets .chip').forEach(c=>c.setAttribute('aria-pressed',c.dataset.d===arr.join(' ')));
+  regen();
+}
+function parseInput(str){
+  const parts=str.trim().split(/[\s,]+/).filter(Boolean);
+  const nums=parts.map(p=>/^-?\d{1,3}$/.test(p)?parseInt(p,10):NaN);
+  if(nums.length<2||nums.length>8||nums.some(Number.isNaN))return null;
+  return nums;
+}
+
+// tabs + presets
+Object.entries(ALGOS).forEach(([k,A])=>{
+  const b=el('button','tab',`<span class="n">${A.lab}</span>${A.name}`);
+  b.dataset.k=k;b.setAttribute('role','tab');b.setAttribute('aria-selected','false');
+  b.onclick=()=>setAlgo(k);$('#tabs').appendChild(b);
+});
+PRESETS.forEach(([n,d])=>{
+  const b=el('button','chip',`${n}<span class="d">${d}</span>`);b.dataset.d=d;b.title=d;b.setAttribute('aria-pressed','false');
+  b.onclick=()=>{$('#err').textContent='';$('#custom').value='';setData(d.split(' ').map(Number));};
+  $('#presets').appendChild(b);
+});
+$('#load').onclick=()=>{
+  const nums=parseInput($('#custom').value);
+  if(!nums){$('#err').textContent='Type 2 to 8 whole numbers (up to 3 digits) with spaces between them.';return;}
+  $('#err').textContent='';setData(nums);
+};
+$('#custom').addEventListener('keydown',e=>{if(e.key==='Enter'){e.stopPropagation();$('#load').click();}});
+$('#rand').onclick=()=>{
+  const n=5+Math.floor(Math.random()*3),set=new Set();
+  while(set.size<n)set.add(1+Math.floor(Math.random()*99));
+  $('#err').textContent='';$('#custom').value='';setData([...set]);
+};
+$('#next').onclick=()=>{stop();next();};
+$('#back').onclick=()=>{stop();back();};
+$('#play').onclick=togglePlay;
+$('#restart').onclick=restart;
+$('#scrub').oninput=e=>{stop();S_.idx=+e.target.value;S_.mode='full';render();};
+$('#predict').onchange=e=>{stop();S_.predict=e.target.checked;S_.mode='full';render();};
+$('#speed').onchange=()=>{if(S_.playing){clearTimeout(S_.timer);S_.timer=setTimeout(tick,SPEEDS[+$('#speed').value]);}};
+let fsz=100;
+$('#bigger').onclick=()=>{fsz=Math.min(140,fsz+10);document.documentElement.style.fontSize=fsz+'%';layout();render();};
+$('#smaller').onclick=()=>{fsz=Math.max(80,fsz-10);document.documentElement.style.fontSize=fsz+'%';layout();render();};
+$('#theme').onclick=()=>{
+  const r=document.documentElement,cur=r.dataset.theme||(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');
+  r.dataset.theme=cur==='dark'?'light':'dark';
+};
+document.addEventListener('keydown',e=>{
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)&&e.target.type!=='range'&&e.target.type!=='checkbox')return;
+  if(e.key==='ArrowRight'){e.preventDefault();stop();next();}
+  else if(e.key==='ArrowLeft'){e.preventDefault();stop();back();}
+  else if(e.key===' '&&!/^(BUTTON)$/.test(e.target.tagName)){e.preventDefault();togglePlay();}
+  else if(e.key==='Home'){e.preventDefault();restart();}
+});
+let lastW='';
+const ro=new ResizeObserver(()=>{const w=$('#board').clientWidth+'/'+$('#treeScroll').clientWidth;const t=$('#board').clientWidth;
+  if(w!==lastW&&S_.frames.length){const bw=Math.abs(t-(LAY?LAY.W:0));lastW=w;if(bw>2)layout();render();}});
+ro.observe($('#board'));ro.observe($('#treeScroll'));
+
+document.querySelector('#presets .chip').setAttribute('aria-pressed','true');
+setAlgo('insertion');
+</script>
+</body>
+</html>
